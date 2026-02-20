@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ title }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <div class="max-w-2xl mx-auto px-4 py-12">
+    <div class="rounded-2xl bg-slate-900/60 border border-slate-700 shadow-xl p-6">
+      <h1 class="text-2xl font-semibold tracking-tight">{{ title }}</h1>
+      <p class="mt-2 text-slate-300">
+        Sube un Excel <b>.xlsx</b> con la columna
+        <span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-sm">"{{ input_column }}"</span>.
+        Te devolveré el Excel con la columna
+        <span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-sm">"{{ output_column }}"</span>.
+      </p>
+
+      <form id="form" class="mt-6 space-y-4" action="/analyze" method="post" enctype="multipart/form-data">
+        <div class="rounded-xl border border-slate-700 bg-slate-900 p-4">
+          <label class="block text-sm font-medium mb-2">Archivo Excel (.xlsx)</label>
+          <input
+            class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg
+                   file:border-0 file:text-sm file:font-semibold
+                   file:bg-indigo-600 file:text-white hover:file:bg-indigo-500
+                   text-slate-200"
+            type="file"
+            name="file"
+            accept=".xlsx"
+            required
+          />
+          <p class="mt-2 text-xs text-slate-400">
+            Si hay celdas vacías en "Valoración", se clasificarán como neutras.
+          </p>
+        </div>
+
+        <button id="btn" type="submit"
+          class="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 transition px-4 py-3 font-semibold">
+          Analizar y descargar Excel
+        </button>
+
+        <div id="status" class="hidden text-sm text-slate-300">
+          Procesando… (la primera vez puede tardar un poco por carga del modelo)
+        </div>
+
+        <div id="error" class="hidden text-sm text-red-300 bg-red-950/40 border border-red-900 rounded-xl p-3"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("form");
+    const btn = document.getElementById("btn");
+    const status = document.getElementById("status");
+    const errorBox = document.getElementById("error");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorBox.classList.add("hidden");
+      errorBox.textContent = "";
+
+      btn.disabled = true;
+      btn.textContent = "Analizando…";
+      status.classList.remove("hidden");
+
+      try {
+        const data = new FormData(form);
+        const res = await fetch("/analyze", { method: "POST", body: data });
+
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({}));
+          throw new Error(payload.detail || "Error procesando el archivo.");
+        }
+
+        const blob = await res.blob();
+        const cd = res.headers.get("content-disposition") || "";
+        const match = cd.match(/filename="(.+)"/);
+        const filename = match ? match[1] : "resultado.xlsx";
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        errorBox.textContent = err.message || String(err);
+        errorBox.classList.remove("hidden");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Analizar y descargar Excel";
+        status.classList.add("hidden");
+      }
+    });
+  </script>
+</body>
+</html>
