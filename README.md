@@ -1,4 +1,5 @@
 ﻿# Sentiment Analyze
+ https://sentiment-analyze-86473661674.europe-west1.run.app/
 
 ## Overview
 Sentiment Analyze es una aplicación web con FastAPI que clasifica el sentimiento de texto en español a partir de archivos Excel.
