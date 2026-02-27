@@ -1,10 +1,10 @@
-# app/sentiment.py
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
 
-MODEL_NAME: str = "pysentimiento/robertuito-sentiment-analysis"
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 
 @dataclass(frozen=True)
@@ -13,15 +13,19 @@ class SentimentResult:
 
 
 class SentimentService:
-    _analyzer = None
+    _analyzer: Optional[SentimentIntensityAnalyzer] = None
 
     def _load(self) -> None:
         if SentimentService._analyzer is not None:
             return
 
-        from pysentimiento import create_analyzer  # type: ignore
-        # Forzamos el modelo
-        SentimentService._analyzer = create_analyzer(task="sentiment", lang="es", model_name=MODEL_NAME)
+        # Descarga el lexicón VADER si no está
+        try:
+            nltk.data.find("sentiment/vader_lexicon.zip")
+        except LookupError:
+            nltk.download("vader_lexicon")
+
+        SentimentService._analyzer = SentimentIntensityAnalyzer()
 
     def analyze(self, text: Optional[str]) -> SentimentResult:
         if text is None:
@@ -33,11 +37,16 @@ class SentimentService:
 
         self._load()
 
-        prediction = SentimentService._analyzer.predict(cleaned_text)
-        label: str = str(prediction.output).upper()
+        # VADER devuelve puntajes: neg, neu, pos y compound (-1 a 1)
+        scores = SentimentService._analyzer.polarity_scores(cleaned_text)
+        compound: float = float(scores.get("compound", 0.0))
 
-        if label == "POS":
+        # Umbrales típicos VADER:
+        # compound >= 0.05 -> positivo
+        # compound <= -0.05 -> negativo
+        # en medio -> neutro
+        if compound >= 0.05:
             return SentimentResult(tipo_valoracion="Valoración positiva")
-        if label == "NEG":
+        if compound <= -0.05:
             return SentimentResult(tipo_valoracion="Valoración negativa")
         return SentimentResult(tipo_valoracion="Valoración neutra")
