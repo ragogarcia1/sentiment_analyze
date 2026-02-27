@@ -1,7 +1,10 @@
+# app/sentiment.py
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
+
+MODEL_NAME: str = "pysentimiento/robertuito-sentiment-analysis"
 
 
 @dataclass(frozen=True)
@@ -17,7 +20,8 @@ class SentimentService:
             return
 
         from pysentimiento import create_analyzer  # type: ignore
-        SentimentService._analyzer = create_analyzer(task="sentiment", lang="es")
+        # Forzamos el modelo
+        SentimentService._analyzer = create_analyzer(task="sentiment", lang="es", model_name=MODEL_NAME)
 
     def analyze(self, text: Optional[str]) -> SentimentResult:
         if text is None:
@@ -29,7 +33,7 @@ class SentimentService:
 
         self._load()
 
-        prediction = SentimentService._analyzer.predict(cleaned_text)  # POS/NEG/NEU
+        prediction = SentimentService._analyzer.predict(cleaned_text)
         label: str = str(prediction.output).upper()
 
         if label == "POS":
