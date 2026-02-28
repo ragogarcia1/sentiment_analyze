@@ -45,8 +45,8 @@ class SentimentService:
         # compound >= 0.05 -> positivo
         # compound <= -0.05 -> negativo
         # en medio -> neutro
-        if compound >= 0.03:
+        if compound > 0.05:
             return SentimentResult(tipo_valoracion="Valoración positiva")
-        if compound <= 0.01:
+        if compound > -0.05 and compound <= 0.05:
             return SentimentResult(tipo_valoracion="Valoración negativa")
         return SentimentResult(tipo_valoracion="Valoración neutra")
